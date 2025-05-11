@@ -66,6 +66,23 @@
     Include issues where multiple users have logged time (default: $false). 
     When set to $false, issues with time logged by multiple users will be skipped.
 
+.PARAMETER storyPointsField
+    The custom field ID for Story Points in your Jira instance (default: "customfield_10031"). 
+    Different Jira instances use different custom field IDs, so this parameter allows you to specify 
+    the correct field ID for your environment.
+
+.PARAMETER kpiField
+    The custom field ID for KPI or other business value metric in your Jira instance (default: "customfield_10845").
+    This parameter should be set to match your organization's specific custom field for tracking business value or KPIs.
+
+.PARAMETER statusField
+    The field name for issue status (default: "status"). This parameter rarely needs to be changed
+    as "status" is the standard field name in most Jira instances.
+
+.PARAMETER componentsField
+    The field name for components (default: "components"). This parameter rarely needs to be changed
+    as "components" is the standard field name in most Jira instances.
+
 .EXAMPLE
     .\GetUserIssuesFromTimesheetData.ps1
     Runs the script with default parameters. Issues with multiple users will be skipped.
@@ -127,7 +144,7 @@
 
 param (
     [string]$tempoApiToken = "your_default_tempo_api_token_here",
-    [string]$jiraBaseUrl = "https://enghouseglobal.atlassian.net",
+    [string]$jiraBaseUrl = "https://yourcompany.atlassian.net",
     [string]$jiraEmail = "you@company.com",
     [string]$jiraApiToken = "your_default_jira_api_token_here",
     [string[]]$userEmails = @("john.doe@company.com", "jane.smith@company.com"),
@@ -144,7 +161,12 @@ param (
     [string]$logFolder = ".\Logs",
     [switch]$showConsoleLog = $false,
     [switch]$saveDetailedFiles = $false,
-    [switch]$includeMultiUserIssues = $false
+    [switch]$includeMultiUserIssues = $false,
+    # Custom field parameters for adaptability to different Jira configurations
+    [string]$storyPointsField = "customfield_10031",
+    [string]$kpiField = "customfield_10845",
+    [string]$statusField = "status",
+    [string]$componentsField = "components"
 )
 
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
@@ -260,18 +282,18 @@ function Get-ChildIssues($parentIssueId) {
                         IssueKey        = $issue.key
                         Summary         = $issue.fields.summary
                         ParentId        = $parentIssueId
-                        StoryPoints     = if ($issue.fields.PSObject.Properties.Name -contains "customfield_10031" -and $issue.fields.customfield_10031 -ne $null) {
-                            $issue.fields.customfield_10031
+                        StoryPoints     = if ($issue.fields.PSObject.Properties.Name -contains $storyPointsField -and $issue.fields.$storyPointsField -ne $null) {
+                            $issue.fields.$storyPointsField
                         } else { "None" }
-                        KPI          = if ($issue.fields.PSObject.Properties.Name -contains "customfield_10845" -and $issue.fields.customfield_10845 -ne $null) {
-                            $issue.fields.customfield_10845.value
+                        KPI          = if ($issue.fields.PSObject.Properties.Name -contains $kpiField -and $issue.fields.$kpiField -ne $null) {
+                            $issue.fields.$kpiField.value
                         } else { "Unknown" }
-                        Status          = if ($issue.fields.PSObject.Properties.Name -contains "status" -and $issue.fields.status -ne $null) {
-                            $issue.fields.status.name
+                        Status          = if ($issue.fields.PSObject.Properties.Name -contains $statusField -and $issue.fields.$statusField -ne $null) {
+                            $issue.fields.$statusField.name
                         } else { "Unknown" }
-                        Components      = if ($issue.fields.PSObject.Properties.Name -contains "components" -and $issue.fields.components -ne $null -and $issue.fields.components.Count -gt 0) {
+                        Components      = if ($issue.fields.PSObject.Properties.Name -contains $componentsField -and $issue.fields.$componentsField -ne $null -and $issue.fields.$componentsField.Count -gt 0) {
                             $componentNames = @()
-                            foreach ($component in $issue.fields.components) {
+                            foreach ($component in $issue.fields.$componentsField) {
                                 $componentNames += $component.name
                             }
                             [string]::Join(", ", $componentNames)
@@ -389,20 +411,20 @@ function Get-IssueDetailsFromId($issueId) {
         
         # Get issue status
         $issueStatus = "Unknown"
-        if ($response.fields.PSObject.Properties.Name -contains "status" -and $response.fields.status -ne $null) {
-            $issueStatus = $response.fields.status.name
+        if ($response.fields.PSObject.Properties.Name -contains $statusField -and $response.fields.$statusField -ne $null) {
+            $issueStatus = $response.fields.$statusField.name
             Write-Log "Status for issue ${issueId}: ${issueStatus}"
         }
         
-        # Get story points (customfield_10031)
+        # Get story points
         $storyPoints = "None"
-        if ($response.fields.PSObject.Properties.Name -contains "customfield_10031" -and $response.fields.customfield_10031 -ne $null) {
-            $storyPoints = $response.fields.customfield_10031
+        if ($response.fields.PSObject.Properties.Name -contains $storyPointsField -and $response.fields.$storyPointsField -ne $null) {
+            $storyPoints = $response.fields.$storyPointsField
             Write-Log "Story points for issue ${issueId}: ${storyPoints}"
         }
 
-        $kpi = if ($response.fields.PSObject.Properties.Name -contains "customfield_10845" -and $response.fields.customfield_10845 -ne $null) {
-            $response.fields.customfield_10845.value
+        $kpi = if ($response.fields.PSObject.Properties.Name -contains $kpiField -and $response.fields.$kpiField -ne $null) {
+            $response.fields.$kpiField.value
         } else { "Unknown" }
 
         # Check if issue has parent and get parentId
@@ -415,9 +437,9 @@ function Get-IssueDetailsFromId($issueId) {
 
         # Fix for components processing
         $components = "None"
-        if ($response.fields.PSObject.Properties.Name -contains "components" -and $response.fields.components -ne $null -and $response.fields.components.Count -gt 0) {
+        if ($response.fields.PSObject.Properties.Name -contains $componentsField -and $response.fields.$componentsField -ne $null -and $response.fields.$componentsField.Count -gt 0) {
             $componentNames = @()
-            foreach ($component in $response.fields.components) {
+            foreach ($component in $response.fields.$componentsField) {
                 $componentNames += $component.name
             }
             $components = [string]::Join(", ", $componentNames)

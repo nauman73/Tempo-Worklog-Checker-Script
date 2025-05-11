@@ -1,7 +1,7 @@
 # Tempo Worklog Checker Script
 
 ## Overview
-A PowerShell script that retrieves and analyzes Tempo timesheets data from Jira, specifically designed for tracking time spent on issues of particular types. The script processes worklogs for multiple users and generates comprehensive reports with detailed time tracking metrics.
+A PowerShell script that retrieves and analyzes Tempo timesheets data from Jira cloud, specifically designed for tracking time spent on issues of particular types. The script processes worklogs for multiple users and generates comprehensive reports with detailed time tracking metrics.
 
 ## Features
 - Retrieves Tempo timesheets worklogs for multiple users
@@ -57,6 +57,12 @@ The script accepts multiple parameters that can be customized:
 - `showConsoleLog`: Show log output in console (default: $false)
 - `saveDetailedFiles`: Save detailed output files for each user and issue (default: $false)
 
+### Jira Custom Field Parameters
+- `storyPointsField`: Custom field ID for story points (default: "customfield_10031")
+- `kpiField`: Custom field ID for KPI information (default: "customfield_10845")
+- `statusField`: Field name for issue status (default: "status")
+- `componentsField`: Field name for components (default: "components")
+
 ## Usage Examples
 
 ### Basic Usage
@@ -109,12 +115,22 @@ The script accepts multiple parameters that can be customized:
     -jiraApiToken "JIRA_API_TOKEN" `
     -tempoBaseUrl "https://api.tempo.io" `
     -tempoApiBase "https://api.tempo.io/4" `
+    -dateFrom "2025-04-01" `
+    -dateTo "2025-04-30" `
     -offset 0 `
     -limit 100 `
     -maxPages 5 `
     -includeIssueTypes @("Bug") `
     -includeMultiUserIssues `
-    -showConsoleLog
+    -outputFolder ".\Output" `
+    -issueWorklogsDir ".\Output\issue_worklogs" `
+    -logFolder ".\Logs" `
+    -showConsoleLog `
+    -saveDetailedFiles `
+    -storyPointsField "customfield_10031" `
+    -kpiField "customfield_10845" `
+    -statusField "status" `
+    -componentsField "components"
 ```
 
 ### Real-World Example
